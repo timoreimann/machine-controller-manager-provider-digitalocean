@@ -1,4 +1,4 @@
-module github.com/gardener/machine-controller-manager-provider-sampleprovider
+module github.com/gardener/machine-controller-manager-provider-digitalocean
 
 go 1.13
 
