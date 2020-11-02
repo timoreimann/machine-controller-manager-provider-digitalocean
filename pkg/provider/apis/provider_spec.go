@@ -15,6 +15,11 @@ package api
 
 // ProviderSpec is the spec to be used while parsing the calls.
 type ProviderSpec struct {
-	// APIVersion        string                      `json:"apiVersion,omitempty"`
-	// AMI               string                      `json:"ami,omitempty"`
+	Name  string `json:"name,omitempty"`
+	Image string `json:"image,omitempty"`
+	//Volumes      []string `json:"volumes,omitempty"`
+	Size    string   `json:"size,omitempty"`
+	Region  string   `json:"region,omitempty"`
+	VPCUUID string   `json:"vpc_uuid,omitempty"`
+	Tags    []string `json:"tags,omitempty"`
 }

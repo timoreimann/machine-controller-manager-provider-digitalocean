@@ -19,11 +19,15 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/digitalocean/godo"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
 	"k8s.io/klog"
+
+	spi "github.com/gardener/machine-controller-manager-provider-digitalocean/pkg/spi"
 )
 
 // NOTE
@@ -57,12 +61,38 @@ import (
 // These could be done using tag(s)/resource-groups etc.
 // This logic is used by safety controller to delete orphan VMs which are not backed by any machine CRD
 //
-func (p *Provider) CreateMachine(ctx context.Context, req *driver.CreateMachineRequest) (*driver.CreateMachineResponse, error) {
+func (p *Provider) CreateMachine(ctx context.Context, machineReq *driver.CreateMachineRequest) (*driver.CreateMachineResponse, error) {
 	// Log messages to track request
-	klog.V(2).Infof("Machine creation request has been recieved for %q", req.Machine.Name)
-	defer klog.V(2).Infof("Machine creation request has been processed for %q", req.Machine.Name)
+	klog.V(2).Infof("Machine creation request has been recieved for %q", machineReq.Machine.Name)
+	defer klog.V(2).Infof("Machine creation request has been processed for %q", machineReq.Machine.Name)
 
-	return &driver.CreateMachineResponse{}, status.Error(codes.Unimplemented, "")
+	providerSpec, token, err := decodeProviderSpecAndSecret(machineReq.MachineClass, machineReq.Secret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode provide spec and secret: %s", err)
+	}
+
+	spiImpl := spi.NewPluginSPIImpl(token)
+
+	dropletReq := &godo.DropletCreateRequest{
+		Name:    providerSpec.Name,
+		Region:  providerSpec.Region,
+		Size:    providerSpec.Size,
+		Image:   godo.DropletCreateImage{
+			Slug: providerSpec.Size,
+		},
+		Tags:    providerSpec.Tags,
+		VPCUUID: providerSpec.VPCUUID,
+	}
+	droplet, err := spiImpl.CreateDroplet(ctx, dropletReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create droplet: %s", err)
+	}
+
+	return &driver.CreateMachineResponse{
+		ProviderID:     fmt.Sprintf("digitalocean://%d", droplet.ID),
+		NodeName:       droplet.Name,
+		LastKnownState: droplet.Status,
+	}, nil
 }
 
 // DeleteMachine handles a machine deletion request

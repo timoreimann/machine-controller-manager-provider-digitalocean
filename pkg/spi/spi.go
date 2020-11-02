@@ -16,12 +16,39 @@ limitations under the License.
 
 package spi
 
+import (
+	"context"
+
+	"github.com/digitalocean/godo"
+)
+
 // SessionProviderInterface provides an interface to deal with cloud provider session
 // Example interfaces are listed below.
 type SessionProviderInterface interface {
+	CreateDroplet(ctx context.Context, req *godo.DropletCreateRequest) (*godo.Droplet, error)
+	DeleteDroplet(ctx context.Context, id int) error
 	// NewSession(*corev1.Secret, string) (*session.Session, error)
 	// NewEC2API(*session.Session) ec2iface.EC2API
 }
 
+func (p *PluginSPIImpl) CreateDroplet(ctx context.Context, req *godo.DropletCreateRequest) (*godo.Droplet, error) {
+	d, _, err := p.client.Droplets.Create(ctx, req)
+	return d, err
+}
+
+func (p *PluginSPIImpl) DeleteDroplet(ctx context.Context, id int) error {
+	_, err := p.client.Droplets.Delete(ctx, id)
+	return err
+}
+
 // PluginSPIImpl is the real implementation of SPI interface that makes the calls to the provider SDK.
-type PluginSPIImpl struct{}
+type PluginSPIImpl struct{
+	client *godo.Client
+}
+
+func NewPluginSPIImpl(token string) *PluginSPIImpl {
+	return &PluginSPIImpl{
+		client: godo.NewFromToken(token),
+	}
+}
+

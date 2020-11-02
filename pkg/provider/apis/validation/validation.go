@@ -18,12 +18,43 @@ limitations under the License.
 package validation
 
 import (
+	"errors"
+
+	utilerror "k8s.io/apimachinery/pkg/util/errors"
+
 	api "github.com/gardener/machine-controller-manager-provider-digitalocean/pkg/provider/apis"
+	"github.com/gardener/machine-controller-manager-provider-digitalocean/pkg/provider/internal/util"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
 // ValidateProviderSpecNSecret validates provider spec and secret to check if all fields are present and valid
-func ValidateProviderSpecNSecret(spec *api.ProviderSpec, secrets *corev1.Secret) []error {
-	// Code for validation of providerSpec goes here
-	return nil
+func ValidateProviderSpecNSecret(spec *api.ProviderSpec, secret *corev1.Secret) error {
+	var errs []error
+
+	if spec.Name == "" {
+		errs = append(errs, errors.New("name is missing"))
+	}
+	if spec.Image == "" {
+		errs = append(errs, errors.New("image is missing"))
+	}
+	if spec.Size == "" {
+		errs = append(errs, errors.New("size is missing"))
+	}
+	if spec.Region == "" {
+		errs = append(errs, errors.New("region is missing"))
+	}
+	if spec.VPCUUID == "" {
+		errs = append(errs, errors.New("VPC UUID is missing"))
+	}
+	if len(spec.Tags) == 0 {
+		errs = append(errs, errors.New("tags are missing"))
+	}
+
+	token := util.ExtractToken(secret)
+	if token == "" {
+		errs = append(errs, errors.New("token is missing from secret"))
+	}
+
+	return utilerror.NewAggregate(errs)
 }
